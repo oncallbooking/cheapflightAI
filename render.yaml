@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: flight-deals-web
+    env: docker
+    branch: main
+    dockerfilePath: Dockerfile
+    plan: starter
+    autoDeploy: true
+    buildCommand: ""
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+
+  - type: worker
+    name: flight-deals-worker
+    env: docker
+    branch: main
+    dockerfilePath: Dockerfile
+    plan: starter
+    startCommand: python -m worker.runner
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+        # include same envs as web
+
+cron:
+  - name: hourly-trigger
+    schedule: "0 * * * *"
+    timezone: "Asia/Kolkata"
+    service: flight-deals-web
+    path: /trigger
+    method: POST
