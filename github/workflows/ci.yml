@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: flights
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d flights" 
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r requirements_test.txt
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do pg_isready -h 127.0.0.1 -p 5432 && break || sleep 1; done
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/flights
+        run: alembic upgrade head
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/flights
+          REDIS_URL: redis://127.0.0.1:6379/0
+        run: pytest -q
