@@ -1,0 +1,53 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: flights
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    command: uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-10000} --proxy-headers
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "${PORT:-10000}:${PORT:-10000}"
+    volumes:
+      - .:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-10000}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    command: python -m worker.runner
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  db_data:
