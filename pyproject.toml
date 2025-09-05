@@ -1,0 +1,9 @@
+[tool.poetry]
+name = "flight-deals-crawler"
+version = "0.1.0"
+description = "Crawler, aggregator, and hourly Telegram notifier for flight deals"
+authors = ["Your Name <you@example.com>"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
